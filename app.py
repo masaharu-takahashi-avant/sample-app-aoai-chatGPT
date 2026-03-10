@@ -371,6 +371,7 @@ async def promptflow_request(request):
                 json={
                     app_settings.promptflow.request_field_name: pf_formatted_obj[-1]["inputs"][app_settings.promptflow.request_field_name],
                     "chat_history": pf_formatted_obj[:-1],
+                    "format_instruction": os.environ.get("DEFAULT_FORMAT_INSTRUCTION", "丁寧語で読みやすく記載してください"),  
                 },
                 headers=headers,
             )
