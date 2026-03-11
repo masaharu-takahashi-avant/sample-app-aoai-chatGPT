@@ -15,6 +15,38 @@
   gap: 5px;
 }
 
+.sidePanel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 280px;
+  min-width: 280px;
+  padding: 16px;
+  background: #ffffff;
+  box-shadow:
+    0px 2px 4px rgba(0, 0, 0, 0.14),
+    0px 0px 2px rgba(0, 0, 0, 0.12);
+  border-radius: 8px;
+  align-self: stretch;
+  max-height: calc(100vh - 100px);
+}
+
+.sidePanelTitle {
+  font-size: 18px;
+  font-weight: 600;
+  color: #000000;
+}
+
+.sidePanelDescription {
+  font-size: 12px;
+  color: #616161;
+  line-height: 18px;
+}
+
+.formatInstructionField {
+  width: 100%;
+}
+
 .chatContainer {
   flex: 1;
   display: flex;
@@ -27,6 +59,71 @@
   border-radius: 8px;
   overflow-y: auto;
   max-height: calc(100vh - 100px);
+}
+
+.citationPanelCount {
+  min-width: 24px;
+  height: 24px;
+  border-radius: 12px;
+  background: #edf5fd;
+  color: #0f6cbd;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.citationPanelHeaderSecondary {
+  font-style: normal;
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 20px;
+  color: #616161;
+}
+
+.citationPanelEmpty {
+  font-size: 14px;
+  line-height: 20px;
+  color: #616161;
+}
+
+.referenceList {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.referenceListItem {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #d1d1d1;
+  border-radius: 6px;
+  background: #ffffff;
+  text-align: left;
+  cursor: pointer;
+}
+
+.referenceListItemActive {
+  border-color: #0f6cbd;
+  background: #edf5fd;
+}
+
+.referenceListTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #242424;
+}
+
+.referenceListMeta {
+  font-size: 12px;
+  color: #616161;
+  word-break: break-word;
 }
 
 .chatEmptyState {
@@ -139,15 +236,26 @@
 
 .chatInput {
   position: sticky;
-  flex: 0 0 100px;
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+  flex: 0 0 auto;
   padding-top: 12px;
   padding-bottom: 24px;
   padding-left: 24px;
   padding-right: 24px;
-  width: calc(100% - 100px);
+  width: 100%;
   max-width: 1028px;
   margin-bottom: 50px;
   margin-top: 8px;
+  box-sizing: border-box;
+}
+
+.chatInputActions {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  flex-shrink: 0;
 }
 
 .clearChatBroom {
@@ -156,14 +264,10 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  position: absolute;
   width: 40px;
   height: 40px;
-  left: 7px;
-  top: 13px;
   color: #ffffff;
   border-radius: 4px;
-  z-index: 1;
 }
 
 .clearChatBroomNoCosmos {
@@ -172,14 +276,10 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  position: absolute;
   width: 40px;
   height: 40px;
-  left: 7px;
-  top: 66px;
   color: #ffffff;
   border-radius: 4px;
-  z-index: 1;
 }
 
 .newChatIcon {
@@ -188,14 +288,10 @@
   flex-direction: row;
   justify-content: center;
   align-items: center;
-  position: absolute;
   width: 40px;
   height: 40px;
-  left: 7px;
-  top: 66px;
   color: #ffffff;
   border-radius: 4px;
-  z-index: 1;
 }
 
 .stopGeneratingContainer {
@@ -371,21 +467,37 @@ a {
 }
 
 @media (max-width: 480px) {
+  .chatRoot {
+    flex-direction: column;
+  }
+
+  .sidePanel {
+    width: 100%;
+    min-width: 100%;
+    max-height: none;
+  }
+
   .chatInput {
     width: 90%;
     max-width: 90%;
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chatInputActions {
+    flex-direction: row;
   }
 
   .newChatIcon {
-    left: 0px;
+    width: 40px;
   }
 
   .clearChatBroom {
-    left: 0px;
+    width: 40px;
   }
 
   .clearChatBroomNoCosmos {
-    left: 0px;
+    width: 40px;
   }
 
   .chatEmptyStateTitle {

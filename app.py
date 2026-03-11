@@ -101,6 +101,15 @@ frontend_settings = {
         "chat_description": app_settings.ui.chat_description,
         "show_share_button": app_settings.ui.show_share_button,
         "show_chat_history_button": app_settings.ui.show_chat_history_button,
+        "session_format_title": app_settings.ui.session_format_title,
+        "format_instruction_label": app_settings.ui.format_instruction_label,
+        "format_instruction_description": app_settings.ui.format_instruction_description,
+        "references_title": app_settings.ui.references_title,
+        "references_empty_text": app_settings.ui.references_empty_text,
+        "selected_reference_title": app_settings.ui.selected_reference_title,
+        "question_input_placeholder": app_settings.ui.question_input_placeholder,
+        "copy_ready_answer_label": app_settings.ui.copy_ready_answer_label,
+        "citation_aware_answer_label": app_settings.ui.citation_aware_answer_label,
     },
     "sanitize_answer": app_settings.base_settings.sanitize_answer,
     "oyd_enabled": app_settings.base_settings.datasource_type,
@@ -371,7 +380,10 @@ async def promptflow_request(request):
                 json={
                     app_settings.promptflow.request_field_name: pf_formatted_obj[-1]["inputs"][app_settings.promptflow.request_field_name],
                     "chat_history": pf_formatted_obj[:-1],
-                    "format_instruction": os.environ.get("DEFAULT_FORMAT_INSTRUCTION", "丁寧語で読みやすく記載してください"),  
+                    app_settings.promptflow.format_instruction_field_name: request.get(
+                        "format_instruction",
+                        os.environ.get("DEFAULT_FORMAT_INSTRUCTION", "丁寧語で読みやすく記載してください"),
+                    ),
                 },
                 headers=headers,
             )
@@ -449,7 +461,9 @@ async def complete_chat_request(request_body, request_headers):
             response,
             history_metadata,
             app_settings.promptflow.response_field_name,
-            app_settings.promptflow.citations_field_name
+            app_settings.promptflow.citations_field_name,
+            app_settings.promptflow.clean_response_field_name,
+            app_settings.promptflow.cited_response_field_name,
         )
     else:
         response, apim_request_id = await send_chat_request(request_body, request_headers)

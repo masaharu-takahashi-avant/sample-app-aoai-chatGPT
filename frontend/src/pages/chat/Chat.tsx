@@ -1,5 +1,5 @@
 import { useRef, useState, useEffect, useContext, useLayoutEffect } from 'react'
-import { CommandBarButton, IconButton, Dialog, DialogType, Stack } from '@fluentui/react'
+import { CommandBarButton, IconButton, Dialog, DialogType, Stack, Text, TextField } from '@fluentui/react'
 import { SquareRegular, ShieldLockRegular, ErrorCircleRegular } from '@fluentui/react-icons'
 
 import ReactMarkdown from 'react-markdown'
@@ -45,6 +45,9 @@ const enum messageStatus {
   Done = 'Done'
 }
 
+const FORMAT_INSTRUCTION_STORAGE_KEY = 'promptflow-format-instruction'
+const DEFAULT_FORMAT_INSTRUCTION = '丁寧語で読みやすく記載してください'
+
 const Chat = () => {
   const appStateContext = useContext(AppStateContext)
   const ui = appStateContext?.state.frontendSettings?.ui
@@ -53,6 +56,7 @@ const Chat = () => {
   const [isLoading, setIsLoading] = useState<boolean>(false)
   const [showLoadingMessage, setShowLoadingMessage] = useState<boolean>(false)
   const [activeCitation, setActiveCitation] = useState<Citation>()
+  const [activeCitations, setActiveCitations] = useState<Citation[]>([])
   const [isCitationPanelOpen, setIsCitationPanelOpen] = useState<boolean>(false)
   const [isIntentsPanelOpen, setIsIntentsPanelOpen] = useState<boolean>(false)
   const abortFuncs = useRef([] as AbortController[])
@@ -65,6 +69,13 @@ const Chat = () => {
   const [errorMsg, setErrorMsg] = useState<ErrorMessage | null>()
   const [logo, setLogo] = useState('')
   const [answerId, setAnswerId] = useState<string>('')
+  const [formatInstruction, setFormatInstruction] = useState<string>(() => {
+    if (typeof window === 'undefined') {
+      return DEFAULT_FORMAT_INSTRUCTION
+    }
+
+    return sessionStorage.getItem(FORMAT_INSTRUCTION_STORAGE_KEY) ?? DEFAULT_FORMAT_INSTRUCTION
+  })
 
   const errorDialogContentProps = {
     type: DialogType.close,
@@ -113,6 +124,10 @@ const Chat = () => {
   }, [appStateContext?.state.isLoading])
 
   useEffect(() => {
+    sessionStorage.setItem(FORMAT_INSTRUCTION_STORAGE_KEY, formatInstruction)
+  }, [formatInstruction])
+
+  useEffect(() => {
     setIsLoading(appStateContext?.state.chatHistoryLoadingState === ChatHistoryLoadingState.Loading)
   }, [appStateContext?.state.chatHistoryLoadingState])
 
@@ -141,6 +156,27 @@ const Chat = () => {
     appStateContext?.dispatch({ type: 'SET_ANSWER_EXEC_RESULT', payload: { answerId: answerId, exec_result: exec_results } })
   }
 
+  const parseToolMessageContent = (message: ChatMessage): ToolMessageContent | null => {
+    if (message?.role === TOOL && typeof message.content === 'string') {
+      try {
+        return JSON.parse(message.content) as ToolMessageContent
+      } catch {
+        return null
+      }
+    }
+
+    return null
+  }
+
+  const syncCitationPanel = (message: ChatMessage) => {
+    const toolMessageContent = parseToolMessageContent(message)
+    const citations = toolMessageContent?.citations ?? []
+
+    setActiveCitations(citations)
+    setActiveCitation(citations[0])
+    setIsCitationPanelOpen(citations.length > 0)
+  }
+
   const processResultMessage = (resultMessage: ChatMessage, userMessage: ChatMessage, conversationId?: string) => {
     if (typeof resultMessage.content === "string" && resultMessage.content.includes('all_exec_results')) {
       const parsedExecResults = JSON.parse(resultMessage.content) as AzureSqlServerExecResults
@@ -163,10 +199,14 @@ const Chat = () => {
           content: resultMessage.context,
           date: new Date().toISOString()
         }
+        syncCitationPanel(toolMessage)
       }
     }
 
-    if (resultMessage.role === TOOL) toolMessage = resultMessage
+    if (resultMessage.role === TOOL) {
+      toolMessage = resultMessage
+      syncCitationPanel(resultMessage)
+    }
 
     if (!conversationId) {
       isEmpty(toolMessage)
@@ -220,7 +260,8 @@ const Chat = () => {
     setMessages(conversation.messages)
 
     const request: ConversationRequest = {
-      messages: [...conversation.messages.filter(answer => answer.role !== ERROR)]
+      messages: [...conversation.messages.filter(answer => answer.role !== ERROR)],
+      format_instruction: formatInstruction
     }
 
     let result = {} as ChatResponse
@@ -334,12 +375,14 @@ const Chat = () => {
       } else {
         conversation.messages.push(userMessage)
         request = {
-          messages: [...conversation.messages.filter(answer => answer.role !== ERROR)]
+          messages: [...conversation.messages.filter(answer => answer.role !== ERROR)],
+          format_instruction: formatInstruction
         }
       }
     } else {
       request = {
-        messages: [userMessage].filter(answer => answer.role !== ERROR)
+        messages: [userMessage].filter(answer => answer.role !== ERROR),
+        format_instruction: formatInstruction
       }
       setMessages(request.messages)
     }
@@ -551,6 +594,7 @@ const Chat = () => {
         })
         appStateContext?.dispatch({ type: 'UPDATE_CHAT_HISTORY', payload: appStateContext?.state.currentChat })
         setActiveCitation(undefined)
+        setActiveCitations([])
         setIsCitationPanelOpen(false)
         setIsIntentsPanelOpen(false)
         setMessages([])
@@ -620,6 +664,7 @@ const Chat = () => {
     setIsCitationPanelOpen(false)
     setIsIntentsPanelOpen(false)
     setActiveCitation(undefined)
+    setActiveCitations([])
     appStateContext?.dispatch({ type: 'UPDATE_CURRENT_CHAT', payload: null })
     setProcessMessages(messageStatus.Done)
   }
@@ -717,15 +762,15 @@ const Chat = () => {
   }
 
   const parseCitationFromMessage = (message: ChatMessage) => {
-    if (message?.role && message?.role === 'tool' && typeof message?.content === "string") {
-      try {
-        const toolMessage = JSON.parse(message.content) as ToolMessageContent
-        return toolMessage.citations
-      } catch {
-        return []
-      }
-    }
-    return []
+    return parseToolMessageContent(message)?.citations ?? []
+  }
+
+  const parseAnswerVariantsFromMessage = (message: ChatMessage) => {
+    return parseToolMessageContent(message)
+  }
+
+  const getCitationLabel = (citation: Citation, index: number) => {
+    return citation.title ?? citation.filepath ?? `Reference ${index + 1}`
   }
 
   const parsePlotFromMessage = (message: ChatMessage) => {
@@ -788,6 +833,20 @@ const Chat = () => {
         </Stack>
       ) : (
         <Stack horizontal className={styles.chatRoot}>
+          <Stack.Item className={styles.sidePanel}>
+            <Text className={styles.sidePanelTitle}>{ui?.session_format_title ?? 'Session format'}</Text>
+            <TextField
+              label={ui?.format_instruction_label ?? 'Format instruction'}
+              multiline
+              resizable={false}
+              value={formatInstruction}
+              onChange={(_event, newValue) => setFormatInstruction(newValue ?? '')}
+              className={styles.formatInstructionField}
+            />
+            <Text className={styles.sidePanelDescription}>
+              {ui?.format_instruction_description ?? 'Stored for this browser session and sent with each Prompt Flow request.'}
+            </Text>
+          </Stack.Item>
           <div className={styles.chatContainer}>
             {!messages || messages.length < 1 ? (
               <Stack className={styles.chatEmptyState}>
@@ -807,18 +866,31 @@ const Chat = () => {
                       </div>
                     ) : answer.role === 'assistant' ? (
                       <div className={styles.chatMessageGpt}>
-                        {typeof answer.content === "string" && <Answer
-                          answer={{
-                            answer: answer.content,
-                            citations: parseCitationFromMessage(messages[index - 1]),
-                            generated_chart: parsePlotFromMessage(messages[index - 1]),
-                            message_id: answer.id,
-                            feedback: answer.feedback,
-                            exec_results: execResults
-                          }}
-                          onCitationClicked={c => onShowCitation(c)}
-                          onExectResultClicked={() => onShowExecResult(answerId)}
-                        />}
+                        {typeof answer.content === "string" && (() => {
+                          const answerVariants = parseAnswerVariantsFromMessage(messages[index - 1])
+                          const citations = answerVariants?.citations ?? parseCitationFromMessage(messages[index - 1])
+
+                          return (
+                            <Answer
+                              answer={{
+                                answer: answer.content,
+                                answer_clean: answerVariants?.answer_clean,
+                                answer_cited: answerVariants?.answer_cited,
+                                citations: citations,
+                                documents: citations,
+                                generated_chart: parsePlotFromMessage(messages[index - 1]),
+                                message_id: answer.id,
+                                feedback: answer.feedback,
+                                exec_results: execResults
+                              }}
+                              onCitationClicked={c => {
+                                setActiveCitations(citations)
+                                onShowCitation(c)
+                              }}
+                              onExectResultClicked={() => onShowExecResult(answerId)}
+                            />
+                          )
+                        })()}
                       </div>
                     ) : answer.role === ERROR ? (
                       <div className={styles.chatMessageError}>
@@ -866,7 +938,7 @@ const Chat = () => {
                   </span>
                 </Stack>
               )}
-              <Stack>
+              <Stack className={styles.chatInputActions}>
                 {appStateContext?.state.isCosmosDBAvailable?.status !== CosmosDBStatus.NotConfigured && (
                   <CommandBarButton
                     role="button"
@@ -933,7 +1005,7 @@ const Chat = () => {
               </Stack>
               <QuestionInput
                 clearOnSend
-                placeholder="Type a new question..."
+                placeholder={ui?.question_input_placeholder ?? 'Type a new question...'}
                 disabled={isLoading}
                 onSend={(question, id) => {
                   appStateContext?.state.isCosmosDBAvailable?.cosmosDB
@@ -946,46 +1018,80 @@ const Chat = () => {
               />
             </Stack>
           </div>
-          {/* Citation Panel */}
-          {messages && messages.length > 0 && isCitationPanelOpen && activeCitation && (
-            <Stack.Item className={styles.citationPanel} tabIndex={0} role="tabpanel" aria-label="Citations Panel">
-              <Stack
-                aria-label="Citations Panel Header Container"
-                horizontal
-                className={styles.citationPanelHeaderContainer}
-                horizontalAlign="space-between"
-                verticalAlign="center">
-                <span aria-label="Citations" className={styles.citationPanelHeader}>
-                  Citations
-                </span>
-                <IconButton
-                  iconProps={{ iconName: 'Cancel' }}
-                  aria-label="Close citations panel"
-                  onClick={() => setIsCitationPanelOpen(false)}
-                />
-              </Stack>
-              <h5
-                className={styles.citationPanelTitle}
-                tabIndex={0}
-                title={
-                  activeCitation.url && !activeCitation.url.includes('blob.core')
-                    ? activeCitation.url
-                    : activeCitation.title ?? ''
-                }
-                onClick={() => onViewSource(activeCitation)}>
-                {activeCitation.title}
-              </h5>
-              <div tabIndex={0}>
-                <ReactMarkdown
-                  linkTarget="_blank"
-                  className={styles.citationPanelContent}
-                  children={DOMPurify.sanitize(activeCitation.content, { ALLOWED_TAGS: XSSAllowTags })}
-                  remarkPlugins={[remarkGfm]}
-                  rehypePlugins={[rehypeRaw]}
-                />
+          <Stack.Item className={styles.citationPanel} tabIndex={0} role="complementary" aria-label="References Panel">
+            <Stack
+              aria-label="References Panel Header Container"
+              horizontal
+              className={styles.citationPanelHeaderContainer}
+              horizontalAlign="space-between"
+              verticalAlign="center">
+              <span aria-label="References" className={styles.citationPanelHeader}>
+                {ui?.references_title ?? 'References'}
+              </span>
+              <span className={styles.citationPanelCount}>{activeCitations.length}</span>
+            </Stack>
+            {activeCitations.length > 0 ? (
+              <div className={styles.referenceList}>
+                {activeCitations.map((citation, index) => (
+                  <button
+                    type="button"
+                    key={`${citation.id}-${index}`}
+                    className={`${styles.referenceListItem} ${activeCitation?.id === citation.id ? styles.referenceListItemActive : ''}`}
+                    onClick={() => {
+                      setActiveCitation(citation)
+                      setIsCitationPanelOpen(true)
+                    }}>
+                    <span className={styles.referenceListTitle}>{getCitationLabel(citation, index)}</span>
+                    <span className={styles.referenceListMeta}>{citation.filepath ?? citation.url ?? `Reference ${index + 1}`}</span>
+                  </button>
+                ))}
               </div>
-            </Stack.Item>
-          )}
+            ) : (
+              <Text className={styles.citationPanelEmpty}>References from the current answer will appear here.</Text>
+            )}
+            {isCitationPanelOpen && activeCitation && (
+              <>
+                <Stack
+                  aria-label="Citations Panel Header Container"
+                  horizontal
+                  className={styles.citationPanelHeaderContainer}
+                  horizontalAlign="space-between"
+                  verticalAlign="center">
+                  <span aria-label="Selected reference" className={styles.citationPanelHeaderSecondary}>
+                    {ui?.selected_reference_title ?? 'Selected reference'}
+                  </span>
+                  <IconButton
+                    iconProps={{ iconName: 'Cancel' }}
+                    aria-label="Clear selected reference"
+                    onClick={() => {
+                      setActiveCitation(undefined)
+                      setIsCitationPanelOpen(false)
+                    }}
+                  />
+                </Stack>
+                <h5
+                  className={styles.citationPanelTitle}
+                  tabIndex={0}
+                  title={
+                    activeCitation.url && !activeCitation.url.includes('blob.core')
+                      ? activeCitation.url
+                      : activeCitation.title ?? ''
+                  }
+                  onClick={() => onViewSource(activeCitation)}>
+                  {activeCitation.title ?? activeCitation.filepath ?? 'Reference detail'}
+                </h5>
+                <div tabIndex={0}>
+                  <ReactMarkdown
+                    linkTarget="_blank"
+                    className={styles.citationPanelContent}
+                    children={DOMPurify.sanitize(activeCitation.content, { ALLOWED_TAGS: XSSAllowTags })}
+                    remarkPlugins={[remarkGfm]}
+                    rehypePlugins={[rehypeRaw]}
+                  />
+                </div>
+              </>
+            )}
+          </Stack.Item>
           {messages && messages.length > 0 && isIntentsPanelOpen && (
             <Stack.Item className={styles.citationPanel} tabIndex={0} role="tabpanel" aria-label="Intents Panel">
               <Stack

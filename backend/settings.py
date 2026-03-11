@@ -49,6 +49,15 @@ class _UiSettings(BaseSettings):
     favicon: str = "/favicon.ico"
     show_share_button: bool = True
     show_chat_history_button: bool = True
+    session_format_title: str = "Session format"
+    format_instruction_label: str = "Format instruction"
+    format_instruction_description: str = "Stored for this browser session and sent with each Prompt Flow request."
+    references_title: str = "References"
+    references_empty_text: str = "References from the current answer will appear here."
+    selected_reference_title: str = "Selected reference"
+    question_input_placeholder: str = "Type a new question..."
+    copy_ready_answer_label: str = "Copy-ready answer"
+    citation_aware_answer_label: str = "Citation-aware answer"
 
 
 class _ChatHistorySettings(BaseSettings):
@@ -79,7 +88,10 @@ class _PromptflowSettings(BaseSettings):
     response_timeout: float = 30.0
     request_field_name: str = "query"
     response_field_name: str = "reply"
+    clean_response_field_name: str = "answer_clean"
+    cited_response_field_name: str = "answer_cited"
     citations_field_name: str = "documents"
+    format_instruction_field_name: str = "format_instruction"
 
 
 class _AzureOpenAIFunction(BaseModel):

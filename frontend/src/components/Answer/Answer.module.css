@@ -28,6 +28,26 @@
   overflow-x: auto;
 }
 
+.answerBody {
+  width: 100%;
+  gap: 8px;
+}
+
+.answerSectionTitle {
+  margin-left: 11px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: #616161;
+}
+
+.answerSectionDivider {
+  margin-left: 11px;
+  margin-right: 11px;
+  color: #616161;
+  font-size: 12px;
+}
+
 .answerHeader {
   position: relative;
 }

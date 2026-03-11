@@ -1,6 +1,9 @@
 export type AskResponse = {
   answer: string | []
+  answer_clean?: string
+  answer_cited?: string
   citations: Citation[]
+  documents?: Citation[]
   generated_chart: string | null
   error?: string
   message_id?: string
@@ -21,8 +24,10 @@ export type Citation = {
 }
 
 export type ToolMessageContent = {
-  citations: Citation[]
-  intent: string
+  citations?: Citation[]
+  intent?: string
+  answer_clean?: string
+  answer_cited?: string
 }
 
 export type AzureSqlServerExecResult = {
@@ -86,6 +91,7 @@ export type ChatResponse = {
 
 export type ConversationRequest = {
   messages: ChatMessage[]
+  format_instruction?: string
 }
 
 export type UserInfo = {
@@ -131,6 +137,15 @@ export type UI = {
   chat_logo?: string
   show_share_button?: boolean
   show_chat_history_button?: boolean
+  session_format_title?: string
+  format_instruction_label?: string
+  format_instruction_description?: string
+  references_title?: string
+  references_empty_text?: string
+  selected_reference_title?: string
+  question_input_placeholder?: string
+  copy_ready_answer_label?: string
+  citation_aware_answer_label?: string
 }
 
 export type FrontendSettings = {

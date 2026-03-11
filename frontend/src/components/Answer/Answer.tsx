@@ -35,12 +35,15 @@ export const Answer = ({ answer, onCitationClicked, onExectResultClicked }: Prop
   const filePathTruncationLimit = 50
 
   const parsedAnswer = useMemo(() => parseAnswer(answer), [answer])
+  const hasCitedAnswer =
+    !!parsedAnswer?.citedText && parsedAnswer.citedText.trim() !== parsedAnswer.cleanText.trim()
   const [chevronIsExpanded, setChevronIsExpanded] = useState(isRefAccordionOpen)
   const [feedbackState, setFeedbackState] = useState(initializeAnswerFeedback(answer))
   const [isFeedbackDialogOpen, setIsFeedbackDialogOpen] = useState(false)
   const [showReportInappropriateFeedback, setShowReportInappropriateFeedback] = useState(false)
   const [negativeFeedbackList, setNegativeFeedbackList] = useState<Feedback[]>([])
   const appStateContext = useContext(AppStateContext)
+  const ui = appStateContext?.state.frontendSettings?.ui
   const FEEDBACK_ENABLED =
     appStateContext?.state.frontendSettings?.feedback_enabled && appStateContext?.state.isCosmosDBAvailable?.cosmosDB
   const SANITIZE_ANSWER = appStateContext?.state.frontendSettings?.sanitize_answer
@@ -241,23 +244,54 @@ export const Answer = ({ answer, onCitationClicked, onExectResultClicked }: Prop
       )
     }
   }
+
+  const renderMarkdown = (content?: string | null) => {
+    if (!content) {
+      return null
+    }
+
+    return (
+      <ReactMarkdown
+        linkTarget="_blank"
+        remarkPlugins={[remarkGfm, supersub]}
+        children={
+          SANITIZE_ANSWER
+            ? DOMPurify.sanitize(content, { ALLOWED_TAGS: XSSAllowTags, ALLOWED_ATTR: XSSAllowAttributes })
+            : content
+        }
+        className={styles.answerText}
+        components={components}
+      />
+    )
+  }
+
   return (
     <>
       <Stack className={styles.answerContainer} tabIndex={0}>
         <Stack.Item>
           <Stack horizontal grow>
             <Stack.Item grow>
-              {parsedAnswer && <ReactMarkdown
-                linkTarget="_blank"
-                remarkPlugins={[remarkGfm, supersub]}
-                children={
-                  SANITIZE_ANSWER
-                    ? DOMPurify.sanitize(parsedAnswer?.markdownFormatText, { ALLOWED_TAGS: XSSAllowTags, ALLOWED_ATTR: XSSAllowAttributes })
-                    : parsedAnswer?.markdownFormatText
-                }
-                className={styles.answerText}
-                components={components}
-              />}
+              {parsedAnswer && (
+                <Stack className={styles.answerBody}>
+                  <Stack.Item>
+                    <Text className={styles.answerSectionTitle}>
+                      {ui?.copy_ready_answer_label ?? 'Copy-ready answer'}
+                    </Text>
+                    {renderMarkdown(parsedAnswer.cleanText)}
+                  </Stack.Item>
+                  {hasCitedAnswer && (
+                    <>
+                      <div className={styles.answerSectionDivider}>---</div>
+                      <Stack.Item>
+                        <Text className={styles.answerSectionTitle}>
+                          {ui?.citation_aware_answer_label ?? 'Citation-aware answer'}
+                        </Text>
+                        {renderMarkdown(parsedAnswer.citedText)}
+                      </Stack.Item>
+                    </>
+                  )}
+                </Stack>
+              )}
             </Stack.Item>
             <Stack.Item className={styles.answerHeader}>
               {FEEDBACK_ENABLED && answer.message_id !== undefined && (

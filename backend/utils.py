@@ -160,7 +160,13 @@ def format_stream_response(chatCompletionChunk, history_metadata, apim_request_i
 
 
 def format_pf_non_streaming_response(
-    chatCompletion, history_metadata, response_field_name, citations_field_name, message_uuid=None
+    chatCompletion,
+    history_metadata,
+    response_field_name,
+    citations_field_name,
+    clean_response_field_name="answer_clean",
+    cited_response_field_name="answer_cited",
+    message_uuid=None,
 ):
     if chatCompletion is None:
         logging.error(
@@ -176,16 +182,30 @@ def format_pf_non_streaming_response(
     logging.debug(f"chatCompletion: {chatCompletion}")
     try:
         messages = []
-        if response_field_name in chatCompletion:
+        assistant_content = chatCompletion.get(clean_response_field_name)
+        if assistant_content is None:
+            assistant_content = chatCompletion.get(response_field_name)
+        if assistant_content is None:
+            assistant_content = chatCompletion.get(cited_response_field_name)
+
+        if assistant_content is not None:
             messages.append({
                 "role": "assistant",
-                "content": chatCompletion[response_field_name] 
+                "content": assistant_content
             })
+
+        tool_content = {}
         if citations_field_name in chatCompletion:
-            citation_content= {"citations": chatCompletion[citations_field_name]}
+            tool_content["citations"] = chatCompletion[citations_field_name]
+        if clean_response_field_name in chatCompletion:
+            tool_content["answer_clean"] = chatCompletion[clean_response_field_name]
+        if cited_response_field_name in chatCompletion:
+            tool_content["answer_cited"] = chatCompletion[cited_response_field_name]
+
+        if tool_content:
             messages.append({ 
                 "role": "tool",
-                "content": json.dumps(citation_content)
+                "content": json.dumps(tool_content, ensure_ascii=False)
             })
 
         response_obj = {
