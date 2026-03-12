@@ -252,3 +252,25 @@ def comma_separated_string_to_list(s: str) -> List[str]:
     '''
     return s.strip().replace(' ', '').split(',')
 
+def build_citations(search_documents):
+    documents = []
+
+    for index, doc in enumerate(search_documents, start=1):
+        metadata = doc.get("metadata") or {}
+        additional_fields = metadata.get("additional_fields") or {}
+
+        documents.append({
+            "id": index,
+            "title": doc.get("title"),
+            "filepath": doc.get("filepath"),
+            "url": doc.get("url"),
+            "content": doc.get("content", ""),
+            "source_question": additional_fields.get("chunk"),
+            "metadata": doc.get("metadata"),
+            "chunk_id": doc.get("chunk_id"),
+            "reindex_id": None,
+            "part_index": None,
+        })
+
+    return documents
+
