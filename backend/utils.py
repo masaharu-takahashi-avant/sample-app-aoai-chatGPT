@@ -195,6 +195,8 @@ def format_pf_non_streaming_response(
             })
 
         tool_content = {}
+        logging.debug("citations_field_name=%s", citations_field_name)
+        logging.debug("raw citations value=%s", chatCompletion.get(citations_field_name))
         if citations_field_name in chatCompletion:
             tool_content["citations"] = chatCompletion[citations_field_name]
         if clean_response_field_name in chatCompletion:
