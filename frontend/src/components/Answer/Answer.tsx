@@ -272,25 +272,21 @@ export const Answer = ({ answer, onCitationClicked, onExectResultClicked }: Prop
           <Stack horizontal grow>
             <Stack.Item grow>
               {parsedAnswer && (
-                <Stack className={styles.answerBody}>
-                  <Stack.Item>
-                    <Text className={styles.answerSectionTitle}>
-                      {ui?.copy_ready_answer_label ?? 'Copy-ready answer'}
-                    </Text>
-                    {renderMarkdown(parsedAnswer.cleanText)}
-                  </Stack.Item>
+                <>
+                  <Text className={styles.answerSectionTitle}>
+                    {ui?.copy_ready_answer_label ?? 'Copy-ready answer'}
+                  </Text>
+                  {renderMarkdown(parsedAnswer.cleanText)}
                   {hasCitedAnswer && (
                     <>
                       <div className={styles.answerSectionDivider}>---</div>
-                      <Stack.Item>
                         <Text className={styles.answerSectionTitle}>
                           {ui?.citation_aware_answer_label ?? 'Citation-aware answer'}
                         </Text>
                         {renderMarkdown(parsedAnswer.citedText)}
-                      </Stack.Item>
                     </>
                   )}
-                </Stack>
+                </>
               )}
             </Stack.Item>
             <Stack.Item className={styles.answerHeader}>
