@@ -776,6 +776,27 @@ const Chat = () => {
     return citation.title ?? citation.filepath ?? `Reference ${index + 1}`
   }
 
+  const formatCitationContent = (content: string) => {
+    const fieldPattern = /\[[^\]]*\]\s*[：:]/g
+    const fieldStarts = Array.from(content.matchAll(fieldPattern))
+      .map(match => match.index ?? -1)
+      .filter(index => index >= 0 && (index === 0 || /\s/.test(content[index - 1])))
+
+    if (fieldStarts.length < 2 || content.slice(0, fieldStarts[0]).trim().length > 0) {
+      return content
+    }
+
+    const formattedContent = fieldStarts
+      .map((start, index) => {
+        const end = index < fieldStarts.length - 1 ? fieldStarts[index + 1] : content.length
+        return content.slice(start, end).trim()
+      })
+      .filter(Boolean)
+      .join('\n')
+
+    return formattedContent || content
+  }
+
   const parsePlotFromMessage = (message: ChatMessage) => {
     if (message?.role && message?.role === "tool" && typeof message?.content === "string") {
       try {
@@ -1094,7 +1115,7 @@ const Chat = () => {
                   <ReactMarkdown
                     linkTarget="_blank"
                     className={styles.citationPanelContent}
-                    children={DOMPurify.sanitize(activeCitation.content, { ALLOWED_TAGS: XSSAllowTags })}
+                    children={DOMPurify.sanitize(formatCitationContent(activeCitation.content), { ALLOWED_TAGS: XSSAllowTags })}
                     remarkPlugins={[remarkGfm]}
                     rehypePlugins={[rehypeRaw]}
                   />
