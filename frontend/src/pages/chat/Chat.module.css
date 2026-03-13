@@ -393,6 +393,31 @@
   cursor: pointer;
 }
 
+.citationPanelMetaSection {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 12px;
+  border-radius: 6px;
+  background: #f8f8f8;
+}
+
+.citationPanelMetaLabel {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #616161;
+  margin-bottom: 4px;
+}
+
+.citationPanelMetaValue {
+  margin: 0;
+  font-size: 14px;
+  line-height: 20px;
+  color: #242424;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
 .citationPanelContent {
   font-style: normal;
   font-weight: 400;

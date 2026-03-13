@@ -1084,6 +1084,12 @@ const Chat = () => {
                   onClick={() => onViewSource(activeCitation)}>
                   {activeCitation.title ?? activeCitation.filepath ?? 'Reference detail'}
                 </h5>
+                {activeCitation.source_question && (
+                  <div className={styles.citationPanelMetaSection}>
+                    <span className={styles.citationPanelMetaLabel}>Source question</span>
+                    <p className={styles.citationPanelMetaValue}>{activeCitation.source_question}</p>
+                  </div>
+                )}
                 <div tabIndex={0}>
                   <ReactMarkdown
                     linkTarget="_blank"
