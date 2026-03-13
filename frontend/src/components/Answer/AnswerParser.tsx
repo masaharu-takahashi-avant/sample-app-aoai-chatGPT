@@ -33,22 +33,19 @@ export const enumerateCitations = (citations: Citation[]) => {
   return citations
 }
 
-export function parseAnswer(answer: AskResponse): ParsedAnswer {
-  const legacyAnswer = typeof answer.answer === 'string' ? answer.answer : ''
-  const citedText = answer.answer_cited ?? legacyAnswer
-  const cleanText = stripCitationMarkers(answer.answer_clean ?? legacyAnswer)
-
-  if (!cleanText && !citedText) return null
+export const getReferencedCitations = (citedText: string | null | undefined, citations: Citation[] = []) => {
+  if (!citedText) {
+    return enumerateCitations(cloneDeep(citations))
+  }
 
   const citationLinks = citedText.match(citationPattern)
-
   const lengthDocN = '[doc'.length
 
   let filteredCitations = [] as Citation[]
   let citationReindex = 0
   citationLinks?.forEach(link => {
     const citationIndex = link.slice(lengthDocN, link.length - 1)
-    const citation = cloneDeep(answer.citations[Number(citationIndex) - 1]) as Citation
+    const citation = cloneDeep(citations[Number(citationIndex) - 1]) as Citation
     if (citation && !filteredCitations.find(c => c.id === citationIndex)) {
       citation.id = citationIndex // original doc index to de-dupe
       citation.reindex_id = (++citationReindex).toString()
@@ -56,14 +53,22 @@ export function parseAnswer(answer: AskResponse): ParsedAnswer {
     }
   })
 
-  if (!filteredCitations.length && answer.citations.length > 0) {
-    filteredCitations = cloneDeep(answer.citations)
+  if (!filteredCitations.length && citations.length > 0) {
+    filteredCitations = cloneDeep(citations)
   }
 
-  filteredCitations = enumerateCitations(filteredCitations)
+  return enumerateCitations(filteredCitations)
+}
+
+export function parseAnswer(answer: AskResponse): ParsedAnswer {
+  const legacyAnswer = typeof answer.answer === 'string' ? answer.answer : ''
+  const citedText = answer.answer_cited ?? legacyAnswer
+  const cleanText = stripCitationMarkers(answer.answer_clean ?? legacyAnswer)
+
+  if (!cleanText && !citedText) return null
 
   return {
-    citations: filteredCitations,
+    citations: getReferencedCitations(citedText, answer.citations),
     cleanText,
     citedText: citedText || null,
     generated_chart: answer.generated_chart

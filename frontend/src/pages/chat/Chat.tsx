@@ -34,6 +34,7 @@ import {
   ExecResults,
 } from "../../api";
 import { Answer } from "../../components/Answer";
+import { getReferencedCitations } from '../../components/Answer/AnswerParser'
 import { QuestionInput } from "../../components/QuestionInput";
 import { ChatHistoryPanel } from "../../components/ChatHistory/ChatHistoryPanel";
 import { AppStateContext } from "../../state/AppProvider";
@@ -46,7 +47,7 @@ const enum messageStatus {
 }
 
 const FORMAT_INSTRUCTION_STORAGE_KEY = 'promptflow-format-instruction'
-const DEFAULT_FORMAT_INSTRUCTION = '丁寧語で読みやすく記載してください'
+const DEFAULT_FORMAT_INSTRUCTION = '結論ファーストで読みやすく記載してください。マークダウン記法は避けてください。'
 
 const Chat = () => {
   const appStateContext = useContext(AppStateContext)
@@ -170,7 +171,7 @@ const Chat = () => {
 
   const syncCitationPanel = (message: ChatMessage) => {
     const toolMessageContent = parseToolMessageContent(message)
-    const citations = toolMessageContent?.citations ?? []
+    const citations = getReferencedCitations(toolMessageContent?.answer_cited, toolMessageContent?.citations ?? [])
 
     setActiveCitations(citations)
     setActiveCitation(citations[0])
@@ -762,7 +763,9 @@ const Chat = () => {
   }
 
   const parseCitationFromMessage = (message: ChatMessage) => {
-    return parseToolMessageContent(message)?.citations ?? []
+    const toolMessageContent = parseToolMessageContent(message)
+
+    return getReferencedCitations(toolMessageContent?.answer_cited, toolMessageContent?.citations ?? [])
   }
 
   const parseAnswerVariantsFromMessage = (message: ChatMessage) => {
@@ -868,7 +871,8 @@ const Chat = () => {
                       <div className={styles.chatMessageGpt}>
                         {typeof answer.content === "string" && (() => {
                           const answerVariants = parseAnswerVariantsFromMessage(messages[index - 1])
-                          const citations = answerVariants?.citations ?? parseCitationFromMessage(messages[index - 1])
+                          const citations = parseCitationFromMessage(messages[index - 1])
+                          const allCitations = answerVariants?.citations ?? citations
 
                           return (
                             <Answer
@@ -876,8 +880,8 @@ const Chat = () => {
                                 answer: answer.content,
                                 answer_clean: answerVariants?.answer_clean,
                                 answer_cited: answerVariants?.answer_cited,
-                                citations: citations,
-                                documents: citations,
+                                citations: allCitations,
+                                documents: allCitations,
                                 generated_chart: parsePlotFromMessage(messages[index - 1]),
                                 message_id: answer.id,
                                 feedback: answer.feedback,
